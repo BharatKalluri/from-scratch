@@ -1,0 +1,80 @@
+# Running in parallel
+
+CPUs are sequential. So to run stuff in parallel, we'll have to run them truly independent of each other.
+
+Truly independent is a loaded word. There are two ways you can have "truly independent" execution setup. 
+
+One is by using the real CPU threads. At a hardware level, your CPU probably has 2, 4 or 8 threads. If you run two programs in two different threads, then they are truly independent.
+
+The other way is by using something called worker threads. These threads are run by the programming language / OS. We can spin up a lot of these. In the order of hundreds even if you happen to have 4 cores.
+
+Let's start off by writing a simple sequential program which has two simple functions. Count down & count up with a sleep of 0.25 seconds.
+
+
+```python
+import time
+
+
+def countdown(n):
+    while n > 0:
+        print("down", n)
+        time.sleep(0.25)
+        n -= 1
+
+
+def countup(stop):
+    counter = 0
+    while counter < stop:
+        print("up", counter)
+        time.sleep(0.25)
+        counter += 1
+
+
+countdown(5)
+countup(5)
+```
+```
+down 5
+down 4
+down 3
+down 2
+down 1
+up 0
+up 1
+up 2
+up 3
+up 4
+```
+
+Now let's run them "independently" or "in parallel"
+
+The traditional way of doing it is by using threads. Let's spin up two threads and run this again.
+
+```python
+import threading
+
+threading.Thread(target=countdown, args=(5,)).start()
+threading.Thread(target=countup, args=(5,)).start()
+```
+```
+down 5
+up 0
+down 4
+up 1
+down 3
+up 2
+down 2
+up 3
+down 1
+up 4
+```
+
+Awesome, this works as expected!
+
+But then there is no real co-ordination. And we are also using two _different_ threads. Why? The fn is just sleeping in between, right?
+
+## The problem when your program is IO bound
+
+What happens if you are running a server? All your work is mostly in terms of input output. Mostly waiting for stuff to happen, maybe waiting for an API call to respond, maybe waiting for the file contents to show up etc..
+
+Why sit idle when you can do something with the precious CPU resources. Remember this one, this is what we are solving for now.
