@@ -12,14 +12,18 @@ const config: DocsThemeConfig = {
   },
   useNextSeoProps: () => {
     return {
-      titleTemplate: '%s – From Scratch'
-    }
+      titleTemplate: "%s – From Scratch",
+    };
   },
   banner: {
     dismissible: true,
-    key: 'isJsonParserBannerDismissed',
-    text: '🎉 JSON parser from scratch chapter is now out!'
-  }
+    key: "isJsonParserBannerDismissed",
+    text: "🎉 JSON parser from scratch chapter is now out!",
+  },
+  sidebar: {
+    defaultMenuCollapseLevel: 1,
+    autoCollapse: true,
+  },
 };
 
 export default config;

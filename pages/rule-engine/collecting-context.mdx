@@ -1,0 +1,133 @@
+# Collecting context
+
+We have a solid base for a rule engine, let's add some structure to it. Instead of returning a boolean, let's now make sure every rule returns a `RuleEngineResult`. This will hold not only the result, but also the reason. Which will be a string or empty.
+
+```python
+@dataclass
+class RuleEngineResult:
+    result: bool
+    reason: Optional[str]
+```
+
+Let's also create a abstract rule which all `Rule`s inherit and a `RuleOp` enum
+
+```python
+facts_type = dict[str, Union[str, int, float]]
+
+class AbstractRule(ABC):
+    @abstractmethod
+    def run(self, facts: facts_type) -> RuleEngineResult:
+        pass
+
+class RuleOp(Enum):
+    EQ = "EQ"
+    GTE = "GTE"
+```
+
+Let's flush out the Rule. Make it inherit the `AbstractRule` created and re-write it to return a `RuleEngineResult`
+
+```python
+@dataclass
+class Rule(AbstractRule):
+    fact_key: str | int
+    operator: RuleOp
+    value: str | int
+    reason: Optional[str]
+
+    def run(self, facts) -> RuleEngineResult:
+        if self.operator == RuleOp.EQ:
+            rule_res = facts.get(self.fact_key) == self.value
+            return RuleEngineResult(
+                result=rule_res,
+                reason=self.reason if not rule_res else None,
+            )
+        elif self.operator == RuleOp.GTE:
+            rule_res = facts.get(self.fact_key) >= self.value
+            return RuleEngineResult(
+                result=rule_res,
+                reason=self.reason if not rule_res else None,
+            )
+        else:
+            raise Exception(f"unknown operator: {self.operator}")
+```
+
+Now, the `AndRule` can be re-written in such a way that we return the result along with the reason if it exists.
+
+```python
+@dataclass
+class AndRule(AbstractRule):
+    rules: list[AbstractRule]
+    reason: Optional[str]
+
+    def run(self, facts) -> RuleEngineResult:
+        for r in self.rules:
+            r_res: RuleEngineResult = r.run(facts)
+            if not r_res.result:
+                # one condition failed, short circuit
+                return RuleEngineResult(
+                    result=r_res.result,
+                    reason=r_res.reason if r_res.reason else self.reason,
+                )
+        return RuleEngineResult(result=True, reason=None)
+```
+
+With the `OrRule`, its more tricky. An or rule is a success if one of the condition succeeds. But is a failure if both fail. So technically, the only way to pass context is to pass all the reasons. We'll take a design decision and bubble up the reason of the `OrRule`, instead of the individual reasons.
+
+```python
+@dataclass
+class OrRule(AbstractRule):
+    rules: list[AbstractRule]
+    reason: Optional[str]
+
+    def run(self, facts) -> RuleEngineResult:
+        for r in self.rules:
+            r_res = r.run(facts)
+            if r_res.result:
+                # one condition satisfied, short circuit
+                return RuleEngineResult(
+                    result=True, reason=r_res.reason if r_res.reason else self.reason
+                )
+        # nothing was true, or rule failed
+        return RuleEngineResult(result=False, reason=self.reason)
+```
+
+Let's wrap up all of this with a `run_engine` function.
+
+```python
+def run_engine(rule: AbstractRule, facts: facts_type) -> RuleEngineResult:
+    return rule.run(facts=facts)
+```
+
+Let's run a quick test
+
+```python
+facts_dict: facts_type = {"age": 18, "country": "IN"}
+
+USER_UNDER_AGE_RULE = Rule(
+    fact_key="age", operator=RuleOp.GTE, value=18, reason="user under min age"
+)
+USER_IN_US = Rule(fact_key="country", operator=RuleOp.EQ, value="US", reason=None)
+USER_IN_IN = OrRule(
+    [
+        Rule(fact_key="country", operator=RuleOp.EQ, value="IN", reason=None),
+        Rule(fact_key="country", operator=RuleOp.EQ, value="india", reason=None),
+    ],
+    reason=None,
+)
+USER_IN_ALLOWED_COUNTRIES = OrRule(
+    [USER_IN_IN, USER_IN_US], reason="user not in allowed countries"
+)
+
+PRODUCT_ELIGIBILITY = AndRule(
+    [
+        USER_UNDER_AGE_RULE,
+        USER_IN_ALLOWED_COUNTRIES,
+    ],
+    reason="user ineligible",
+)
+
+print(run_engine(rule=PRODUCT_ELIGIBILITY, facts={"age": 18, "country": "RU"})) # RuleEngineResult(result=False, reason='user not in allowed countries')
+print(run_engine(rule=PRODUCT_ELIGIBILITY, facts={"age": 18, "country": "IN"})) # RuleEngineResult(result=True, reason=None)
+```
+
+The rule we set out to implement is now complete!
