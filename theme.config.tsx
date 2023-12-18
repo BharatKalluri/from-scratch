@@ -18,7 +18,7 @@ const config: DocsThemeConfig = {
   banner: {
     dismissible: true,
     key: 'isJsonParserBannerDismissed',
-    text: '🎉 JSON parser from scratch chapter is not out!'
+    text: '🎉 JSON parser from scratch chapter is now out!'
   }
 };
 
