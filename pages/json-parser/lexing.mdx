@@ -1,0 +1,127 @@
+# Lexing
+
+The step of reading the string, removing cruft and structuring them as tokens is called `Lexing`.
+
+To accomplish this, we would need to create a list of possible token types.
+
+```python
+from enum import Enum
+
+class TokenType(Enum):
+    BRACE_OPEN = "BraceOpen"
+    BRACE_CLOSE = "BraceClose"
+    BRACKET_OPEN = "BracketOpen"
+    BRACKET_CLOSE = "BracketClose"
+    STRING = "String"
+    NUMBER = "Number"
+    COMMA = "Comma"
+    COLON = "Colon"
+    TRUE = "True"
+    FALSE = "False"
+    NULL = "Null"
+```
+
+and now a container to start storing token information
+
+```python
+from dataclasses import dataclass
+
+@dataclass
+class Token:
+    token_type: TokenType
+    value: str
+```
+
+Now that we have the class defined, let's start working on the tokenizer. The tokenizer goes character by character and converts them into `Token`s.
+
+For tracking the current position, let's have a variable called `current_pos`. And an array for keeping a track of tokens.
+
+We'll start by skipping empty spaces and new lines. And for every single character token, we can simply append a token into the `tokens` list.
+
+```python
+def tokenizer(raw_string: str) -> list[Token]:
+    tokens = []
+    current_pos = 0
+    while current_pos < len(raw_string):
+        char_at_pos = raw_string[current_pos]
+        if char_at_pos == " " or char_at_pos == "\n":
+            current_pos = current_pos + 1
+        elif char_at_pos == "{":
+            tokens.append(Token(TokenType.BRACE_OPEN, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == "}":
+            tokens.append(Token(TokenType.BRACE_CLOSE, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == ":":
+            tokens.append(Token(TokenType.COLON, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == ",":
+            tokens.append(Token(TokenType.COMMA, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == "[":
+            tokens.append(Token(TokenType.BRACKET_OPEN, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == "]":
+            tokens.append(Token(TokenType.BRACKET_CLOSE, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == ":":
+            tokens.append(Token(TokenType.COLON, value=char_at_pos))
+            current_pos = current_pos + 1
+```
+
+Now to the tricker parts. let's start parsing a string into the token. We know that a string starts with a `"` and ends with an `"`. if it does not, we'll have to throw an error.
+
+For storing the state of the string, let's have a var called `string_contents`. We'll move the `current_pos` by one to move on to move over the `"`. From here, increment char by char until we run into another `"`. At the end, append the entire token into the `tokens` array.
+
+```python
+        elif char_at_pos == '"':
+            string_contents = ""
+            current_pos += 1
+            char_at_pos = raw_string[current_pos]
+            while char_at_pos != '"':
+                current_pos += 1
+                string_contents += char_at_pos
+                char_at_pos = raw_string[current_pos]
+            tokens.append(Token(TokenType.STRING, string_contents))
+            current_pos = current_pos + 1
+```
+
+Finally, we'll need to handle all the other token types. `null`, `true`, `false` & numbers. Let's start by looking at every other alpha numeric combination.
+
+```python
+        elif raw_string[current_pos].isalnum():
+            string_contents = ""
+            while raw_string[current_pos].isalnum():
+                string_contents += raw_string[current_pos]
+                current_pos += 1
+            if string_contents == "true":
+                tokens.append(Token(token_type=TokenType.TRUE, value=string_contents))
+            elif string_contents == "false":
+                tokens.append(Token(token_type=TokenType.FALSE, value=string_contents))
+            elif string_contents == "null":
+                tokens.append(Token(token_type=TokenType.NULL, value=string_contents))
+            elif string_contents.isnumeric():
+                tokens.append(Token(token_type=TokenType.NUMBER, value=string_contents))
+            else:
+                raise Exception(f"parsing failed")
+```
+
+This is a very simple implementation. Until we run into a non alpha-numeric char. (which is usually a `,`) we continuously keep storing the contents of the string in the string contents var and then add that as a token.
+
+With this, our lexer / tokenizer is complete. Let's check the correctness.
+
+```python
+print(tokenize("""{"hello": "world"}"""))
+# [Token(token_type=<TokenType.BRACE_OPEN: 'BraceOpen'>, value='{'), Token(token_type=<TokenType.STRING: 'String'>, value='hello'), Token(token_type=<TokenType.COLON: 'Colon'>, value=':'), Token(token_type=<TokenType.STRING: 'String'>, value='world'), Token(token_type=<TokenType.BRACE_CLOSE: 'BraceClose'>, value='}')]
+```
+
+The tokens look right. In the same fashion, 
+
+```python
+print(tokenize("""{"a"::}"""))
+# [Token(token_type=<TokenType.BRACE_OPEN: 'BraceOpen'>, value='{'), Token(token_type=<TokenType.STRING: 'String'>, value='a'), Token(token_type=<TokenType.COLON: 'Colon'>, value=':'), Token(token_type=<TokenType.COLON: 'Colon'>, value=':'), Token(token_type=<TokenType.BRACE_CLOSE: 'BraceClose'>, value='}')]
+```
+
+This also outputs tokens, even though JSON is syntactically wrong. This is expected as the tokenizer just outputs the pieces, does not really look into the validity of the order etc.. 
+
+But how do we make sure that the pieces not only independently are correct, but also together? That is what is formally called as parsing.

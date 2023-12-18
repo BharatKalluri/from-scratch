@@ -1,0 +1,192 @@
+# Wrapping up
+
+Here are some other challenges worth going into
+
+- better error reporting (location, reason for failure etc..)
+- converting the AST back into a python dictionary
+
+Maybe next up, we can write a `prettier` or beautifier for JSON!
+
+### Codebase
+
+```python
+from dataclasses import dataclass
+from enum import Enum
+
+
+class TokenType(Enum):
+    BRACE_OPEN = "BraceOpen"
+    BRACE_CLOSE = "BraceClose"
+    BRACKET_OPEN = "BracketOpen"
+    BRACKET_CLOSE = "BracketClose"
+    STRING = "String"
+    NUMBER = "Number"
+    COMMA = "Comma"
+    COLON = "Colon"
+    TRUE = "True"
+    FALSE = "False"
+    NULL = "Null"
+
+
+class ASTNodeType(Enum):
+    BOOLEAN = "BOOLEAN"
+    STRING = "STRING"
+    NULL = "NULL"
+    OBJECT = "OBJECT"
+
+
+@dataclass
+class Token:
+    token_type: TokenType
+    value: str
+
+
+@dataclass
+class ASTNode:
+    node_type: ASTNodeType
+    value: any
+
+
+def tokenize(raw_string: str) -> list[Token]:
+    tokens = []
+    current_pos = 0
+    while current_pos < len(raw_string):
+        char_at_pos = raw_string[current_pos]
+        if char_at_pos == " " or char_at_pos == "\n":
+            current_pos = current_pos + 1
+        elif char_at_pos == "{":
+            tokens.append(Token(TokenType.BRACE_OPEN, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == "}":
+            tokens.append(Token(TokenType.BRACE_CLOSE, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == ":":
+            tokens.append(Token(TokenType.COLON, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == ",":
+            tokens.append(Token(TokenType.COMMA, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == "[":
+            tokens.append(Token(TokenType.BRACKET_OPEN, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == "]":
+            tokens.append(Token(TokenType.BRACKET_CLOSE, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == ":":
+            tokens.append(Token(TokenType.COLON, value=char_at_pos))
+            current_pos = current_pos + 1
+        elif char_at_pos == '"':
+            string_contents = ""
+            current_pos += 1
+            char_at_pos = raw_string[current_pos]
+            while char_at_pos != '"':
+                current_pos += 1
+                string_contents += char_at_pos
+                char_at_pos = raw_string[current_pos]
+            tokens.append(Token(TokenType.STRING, string_contents))
+            current_pos = current_pos + 1
+        elif raw_string[current_pos].isalnum():
+            string_contents = ""
+            while raw_string[current_pos].isalnum():
+                string_contents += raw_string[current_pos]
+                current_pos += 1
+            if string_contents == "true":
+                tokens.append(Token(token_type=TokenType.TRUE, value=string_contents))
+            elif string_contents == "false":
+                tokens.append(Token(token_type=TokenType.FALSE, value=string_contents))
+            elif string_contents == "null":
+                tokens.append(Token(token_type=TokenType.NULL, value=string_contents))
+            elif string_contents.isnumeric():
+                tokens.append(Token(token_type=TokenType.NUMBER, value=string_contents))
+            else:
+                raise Exception(f"parsing failed")
+        else:
+            raise Exception(f"parsing failed")
+    return tokens
+
+
+class Parser:
+    current = 0
+
+    def __init__(self, tokens: list[Token]):
+        self.tokens = tokens
+
+    def advance(self):
+        self.current += 1
+        return self.tokens[self.current]
+
+    def parse_arr(self):
+        arr = []
+        node_after_advance = self.advance()  # eat the open brace
+        while node_after_advance.token_type != TokenType.BRACKET_CLOSE:
+            value = self.parse_value()
+            arr.append(value)
+
+            node_after_advance = self.advance()  # eat the comma after the value
+
+            if node_after_advance.token_type == TokenType.COMMA:
+                node_after_advance = self.advance()
+        return arr
+
+    def parse_object(self):
+        node = ASTNode(node_type=ASTNodeType.OBJECT, value={})
+        node_after_advance = self.advance()  # eat {
+
+        while node_after_advance.token_type != TokenType.BRACE_CLOSE:
+            if node_after_advance.token_type == TokenType.STRING:
+                key = node_after_advance.value
+                node_after_advance = self.advance()
+                if node_after_advance.token_type != TokenType.COLON:
+                    raise Exception("colon expected")
+                node_after_advance = self.advance()  # move after the colon
+                value = self.parse_value()
+                node.value[key] = value
+            else:
+                raise Exception("expected a string in key place")
+
+            node_after_advance = self.advance()  # move after the brace close
+            if node_after_advance.token_type == TokenType.COMMA:
+                node_after_advance = self.advance()
+
+        return node
+
+    def parse_value(self):
+        token = self.tokens[self.current]
+
+        if token.token_type == TokenType.STRING:
+            return ASTNode(node_type=ASTNodeType.STRING, value=token.value)
+        elif token.token_type == TokenType.NULL:
+            return ASTNode(node_type=ASTNodeType.NULL, value=None)
+        elif token.token_type == TokenType.TRUE:
+            return ASTNode(node_type=ASTNodeType.BOOLEAN, value=True)
+        elif token.token_type == TokenType.FALSE:
+            return ASTNode(node_type=ASTNodeType.BOOLEAN, value=False)
+        elif token.token_type == TokenType.NUMBER:
+            return ASTNode(node_type=ASTNodeType.STRING, value=int(token.value))
+        elif token.token_type == TokenType.BRACE_OPEN:
+            return self.parse_object()
+
+        elif token.token_type == TokenType.BRACKET_OPEN:
+            return self.parse_arr()
+        else:
+            raise Exception("unknown type")
+
+    def parse(self):
+        return self.parse_value()
+
+
+if __name__ == "__main__":
+    tokenization_output = tokenize(
+        """{
+  "id": "6",
+  "index": 0,
+  "anArray": [{"arrayPos": 0},],
+  "boolean": true,
+  "nullValue": null
+}"""
+    )
+    parsed_values = Parser(tokens=tokenization_output).parse()
+    print(
+        parsed_values,
+    )
+```
