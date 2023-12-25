@@ -1,0 +1,62 @@
+## A simple rule
+
+Let's first visualize a basic rule.
+
+```python
+facts = {'age': 19}
+rule = Rule('age', 'gt', 18)
+print(rule.run(facts)) # true 
+```
+
+To bring this to life, let's start by defining the `Rule` structure. Which takes in `fact_key`, `operator` & `value`. It'll have a `run` function which will just run the mathematical operation based on the operator.
+
+```python
+@dataclass
+class Rule:
+    fact_key: str | int
+    operator: str
+    value: str | int
+
+    def run(self, facts):
+        if self.operator == "gt":
+            return facts.get(self.fact_key) > self.value
+```
+
+We'll add more operators going foreard. Now with this, running the rule would be simply running
+
+```python
+rule = Rule("age", "gt", 18)
+print(rule.run(facts={"age": 19})) # true
+print(rule.run(facts={"age": 18})) # false
+```
+
+Now to the next step, what does it take to build a `AndRule`?
+
+## Building an `AndRule`
+
+An `AndRule` takes in a list of rules, runs __all__ of those `Rule`s and returns the result.
+
+```python
+@dataclass
+class AndRule:
+    rules: list[Rule]
+
+    def run(self, facts):
+        return all([r.run(facts=facts) for r in self.rules])
+```
+
+now with this
+
+```python
+rule = AndRule([Rule("age", "gt", 18), Rule("country", "eq", "IN")])
+print(rule.run(facts={"age": 19, "country": "IN"}))  # true
+print(rule.run(facts={"age": 18, "country": "RU"}))  # false
+```
+
+Similarly, an `OrRule` can also work. Just that instead of using `all`, we'll be using `any`.
+
+This marks a checkpoint, where the rule engine actually is entirely functional!
+
+Now the question is about context, we know the result of the rule. But how do we understand why?
+
+We'll need to propagate context upwards.

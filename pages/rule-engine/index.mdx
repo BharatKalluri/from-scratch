@@ -1,0 +1,17 @@
+# Rule engine
+
+A lot of business revolves around policies. For example, eligibility of a user for a product would be a compliance policy. Eligibility for a loan would be a dictated by a credit policy.
+
+Rules can be written as literal code, but then code would be messy as the rule grows. Understanding why exactly a rule failed would be pretty hard and since a strong structure is missing, visualizing would be also pretty hard.
+
+For example, let's take a product eligibility example. Say for example business states that a user is eligible if and only if _the user is above 18 years old, and the country code is either IN, india or US_.
+
+This rule is pretty simple. But in reality, business rules tend to get pretty large and hairy. It is better to make the policy a rule so that logic & data are clearly separated, and the evolution of the policy is tracked in detail. 
+
+For example, the above rule can be written as
+
+```
+(user_age > 18) and ((country_code == 'in') or (country_code == 'india') or (country_code  == 'US'))
+```
+
+this would be a neat representation of the policy that a business person would also understand. So, let's make an rule engine where rules like these can be written & parsed.

@@ -1,5 +1,6 @@
 {
   "index": "Introduction",
   "event-loop": "Event loop",
-  "json-parser": "JSON parser"
+  "json-parser": "JSON parser",
+  "rule-engine": "Rule engine"
 }
