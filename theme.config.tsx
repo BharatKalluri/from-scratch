@@ -31,7 +31,7 @@ const config: DocsThemeConfig = {
       ))}
       <meta name="twitter:site:domain" content="fromscratch.bharatkalluri.com" />
       <meta name="twitter:url" content="https://x.com/the_bharat_k" />
-      <Script
+      <script
           id={'microsoft-clarity'}
           type="text/javascript"
           dangerouslySetInnerHTML={{
