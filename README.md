@@ -6,12 +6,17 @@ This is a [nextra](https://nextra.site/) website with documentation theme.
 
 ## Chapters planned
 
-- [ ] Event loop
+- [x] Event loop
 - [ ] DNS server
 - [ ] Load balancer
-- [ ] JSON parser
-- [ ] Rule engine
+- [x] JSON parser
+- [x] Rule engine
+- [ ] Rate limiter
 - [ ] DSL (domain specific language)
 - [ ] Interpreted language
+- [ ] TOTP
+- [ ] Web server
+- [ ] Text compression
+- [ ] Cache DB
 
 feel free to suggest more chapters on [twitter](https://twitter.com/the_bharat_k). DMs are open!
