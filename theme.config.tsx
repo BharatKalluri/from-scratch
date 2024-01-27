@@ -50,6 +50,9 @@ const config: DocsThemeConfig = {
     key: "isJsonParserBannerDismissed",
     text: "🎉 JSON parser from scratch chapter is now out!",
   },
+  sidebar: {
+    defaultMenuCollapseLevel: 1,
+  }
 };
 
 export default config;

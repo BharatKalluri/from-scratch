@@ -1,6 +1,6 @@
 {
-  "index": "Introduction",
+  "index": "Introduction to the JSON parser",
   "lexing": "Lexing",
   "parsing": "Parsing",
-  "wrapping-up": "Wrapping up"
+  "wrapping-up": "Wrapping up the parser"
 }
